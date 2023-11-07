@@ -1,0 +1,4 @@
+https://i0.wp.com/www.wikipython.com/wp-content/uploads/PySimpleGUI-hex-code-snapshot.png?resize=1024%2C714&ssl=1
+
+pyinstaller --onefile hello.py
+
