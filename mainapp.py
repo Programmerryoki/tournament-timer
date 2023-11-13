@@ -4,7 +4,6 @@ from components import timer_button, queue_timer, match_button, RepeatTimer
 from time import time
 import threading
 import datetime
-import logging
 
 import os.path
 from google.auth.transport.requests import Request
@@ -39,29 +38,41 @@ insertTextRequest = lambda r, c, text: {
     }
 }
 
+# ++++++++++++++++++++++++
+# Variables
 creds = None
 service = None
 event = None
-# ++++++++++++++++++++++++
-# Variables
+
+# CONSTANTS
 COURT_ROW = 3
 COURT_COL = 4
 MAX_CALL_QUE = 30
-QUE_COL = 5
-CALL_TIME = 2 # min
-PPT_ROW = 6
-PPT_COL = 6
-EDIT_TIME_THRESHOLD = 10
-SLIDE_DOC = 0
-LAST_UPDATE = 0
-UPDATE_THRESHOLD = 10
+QUEUE_MAX_COL = 5
+CALL_TIME = 6 # Minutes before DQ
+
+PPT_ROW = 6 # How many rows are in ppt table
+PPT_COL = 6 # How many cols are in ppt table
+
+DOC_WORD_COUNT = 0 # Number of words in table
+LAST_UPDATE = 0 # Timestamp on when the slide was last updated
+UPDATE_THRESHOLD = 10 # How long before updating slides
 # ++++++++++++++++++++++++
 lock = threading.Lock()
 
 def log(*args):
+    """
+    Print with date in the front
+    :param args:
+    :return: None
+    """
     print(f'{datetime.datetime.now()} -',*args)
 
 def auth():
+    """
+    Checks the credential with slides api, and renew if needed
+    :return:
+    """
     global creds, service
     if os.path.exists("token.json"):
         creds = Credentials.from_authorized_user_file("token.json", SCOPES)
@@ -93,11 +104,20 @@ root.geometry('1000x800')
 # root.resizable(0,0)
 
 def __callback():
+    """
+    Callback specific to closing window
+    :return:
+    """
     with lock:
-        requestDeleteAll(PPT_ROW, PPT_COL, SLIDE_DOC)
+        requestDeleteAll(PPT_ROW, PPT_COL, DOC_WORD_COUNT)
         event.cancel()
 
 def close(window):
+    """
+    Function that opens confirmation window to close the app
+    :param window:
+    :return:
+    """
     second = tk.Toplevel()
     second.title('Confirm')
     second.protocol("WM_DELETE_WINDOW", __callback)
@@ -110,28 +130,39 @@ def close(window):
 
 root.protocol("WM_DELETE_WINDOW", lambda : close(root))
 
-"""
-TODO:
- - add option to change name in timer_button
- - allow moving match
- - Called name list (queue) at the bottom
-"""
-
 def check_time(t, threshold):
+    """
+    Returns false if current time and t has less than threshold difference.
+    Else return current time
+    :param t:
+    :param threshold:
+    :return:
+    """
     t2 = time()
     if t2 - t < threshold:
         return False
     return t2
 
 def set_event():
+    """
+    Set repeating timer to event, and start the timer
+    :return:
+    """
     global event
     event = RepeatTimer(UPDATE_THRESHOLD, checkUpdate)
     event.start()
 
 def callRequest(req, mtd):
-    global SLIDE_DOC, LAST_UPDATE
+    """
+    Use the call request params, and send it to slides api
+    :param req:
+    :param mtd:
+    :return:
+    """
+    global DOC_WORD_COUNT, LAST_UPDATE
     if not req:
         return
+    auth()
     try:
         service.presentations().batchUpdate(
             body={
@@ -140,9 +171,9 @@ def callRequest(req, mtd):
             presentationId=PRESENTATION_ID,
         ).execute()
         if mtd == 'add':
-            SLIDE_DOC += len(req)
+            DOC_WORD_COUNT += len(req)
         elif mtd == 'del':
-            SLIDE_DOC -= len(req)
+            DOC_WORD_COUNT -= len(req)
         event.cancel()
         LAST_UPDATE = time()
         set_event()
@@ -150,7 +181,13 @@ def callRequest(req, mtd):
         log(e)
 
 def requestDeleteAll(max_r, max_c, count):
-    auth()
+    """
+    Creates deletetext request for given count based on max_r and max_c
+    :param max_r:
+    :param max_c:
+    :param count:
+    :return:
+    """
     req = []
     index = 0
     for row in range(1,max_r):
@@ -163,7 +200,13 @@ def requestDeleteAll(max_r, max_c, count):
     thr.join()
 
 def requestAddQue(max_r,max_c,que):
-    auth()
+    """
+    Adds all que object time to slide
+    :param max_r:
+    :param max_c:
+    :param que:
+    :return:
+    """
     req = []
     index = 0
     for row in range(1,max_r):
@@ -184,13 +227,17 @@ def requestAddQue(max_r,max_c,que):
     thr.join()
 
 def checkUpdate():
+    """
+    Checks if it has passed more than UPDATE_THRESHOLD time. If so updates the slide
+    :return:
+    """
     global LAST_UPDATE
     t = check_time(LAST_UPDATE, UPDATE_THRESHOLD)
     if t:
         LAST_UPDATE = t
         if not lock.locked():
             with lock:
-                requestDeleteAll(PPT_ROW, PPT_COL, SLIDE_DOC)
+                requestDeleteAll(PPT_ROW, PPT_COL, DOC_WORD_COUNT)
                 requestAddQue(PPT_ROW, PPT_COL, que)
 
 # Court Timer part
@@ -207,6 +254,11 @@ court_frame.grid(column=0, row=0, columnspan=1, rowspan=1, sticky='w')
 queue_frame = ttk.Frame(root)
 que = []
 def add_que(label):
+    """
+    Add the call to the que, but no more than MAX_CALL_QUE
+    :param label:
+    :return:
+    """
     log('adding to queue')
     if len(que) == MAX_CALL_QUE:
         warning('You are calling too many matches at once!')
@@ -217,15 +269,24 @@ def add_que(label):
     redo_que()
 
 def redo_que():
+    """
+    Reorder the queue shown on app, and update slide as well
+    :return:
+    """
     for i,qt in enumerate(que):
-        qt.grid(row=2+i//QUE_COL, column=i%QUE_COL, rowspan=1, columnspan=1)
+        qt.grid(row=2+i//QUEUE_MAX_COL, column=i%QUEUE_MAX_COL, rowspan=1, columnspan=1)
         qt.index = i
     if not lock.locked():
         with lock:
-            requestDeleteAll(PPT_ROW, PPT_COL, SLIDE_DOC)
+            requestDeleteAll(PPT_ROW, PPT_COL, DOC_WORD_COUNT)
             requestAddQue(PPT_ROW, PPT_COL, que)
 
 def delete_que(n):
+    """
+    Delete a call from the que
+    :param n:
+    :return:
+    """
     que[n].event.cancel()
     que.pop(n).destroy()
     redo_que()
@@ -244,9 +305,7 @@ mb = match_button(master=root,
                   label_list=[list("ABCDE"), ['MS', 'WS', 'XD', 'MD', 'WD'], list('0123456789'), list('0123456789')],
                   pre=[False,False,True,True],
                   action=add_que)
-# mb.pack(side='top', anchor='ne')
 mb.grid(column=1, row=0, columnspan=1, rowspan=1, sticky='w')
-# queue_frame.pack(side='top', anchor='nw')
 queue_frame.grid(column=0, row=1, columnspan=2, rowspan=1, sticky='w')
 set_event()
 root.mainloop()
