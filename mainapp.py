@@ -216,7 +216,7 @@ def requestAddQue(max_r,max_c,que):
                 time_left = que[index].var_time.get()[2:3]
                 if time_left == "6":
                     time_left = "5"
-                if que[index].var_time.get() == "0":
+                if time_left == "0":
                     time_left = "LAST CALL"
                 else:
                     time_left += " min"
