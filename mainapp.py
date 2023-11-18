@@ -37,7 +37,11 @@ insertTextRequest = lambda r, c, text: {
         "insertionIndex": 0
     }
 }
-
+# ++++++++++++++++++++++++
+# Future TODO
+# - improve UI
+# - fix issue with autocomplete lb placement
+#
 # ++++++++++++++++++++++++
 # Variables
 creds = None
@@ -212,8 +216,14 @@ def requestAddQue(max_r,max_c,que):
     for row in range(1,max_r):
         for col in range(0,max_c,2):
             if index < len(que):
-                req.append(insertTextRequest(row, col, que[index].var_match_no.get()))
-                time_left = que[index].var_time.get()[2:3]
+                qi = que[index]
+                n1 = qi.match.p1.get()
+                n1 = n1 if "," not in n1 else f"{n1.split()[0]}, {n1.split(',')[1].split()[0]}"
+                n2 = qi.match.p2.get()
+                n2 = n2 if "," not in n2 else f"{n2.split()[0]}, {n2.split(',')[1].split()[0]}"
+                match_txt = f"{qi.match.match_num.get()}\n{n1}\nVS\n{n2}"
+                req.append(insertTextRequest(row, col, match_txt))
+                time_left = qi.var_time.get()[2:3]
                 if time_left == "6":
                     time_left = "5"
                 if time_left == "0":
@@ -253,7 +263,7 @@ court_frame.grid(column=0, row=0, columnspan=1, rowspan=1, sticky='w')
 
 queue_frame = ttk.Frame(root)
 que = []
-def add_que(label):
+def add_que(match):
     """
     Add the call to the que, but no more than MAX_CALL_QUE
     :param label:
@@ -263,7 +273,7 @@ def add_que(label):
     if len(que) == MAX_CALL_QUE:
         warning('You are calling too many matches at once!')
         return
-    qt = queue_timer(queue_frame, delete_que, len(que), label, minutes=CALL_TIME,
+    qt = queue_timer(queue_frame, delete_que, len(que), match, minutes=CALL_TIME,
                      padx=5, pady=10, highlightthickness=2, highlightbackground='yellow')
     que.append(qt)
     redo_que()
@@ -305,7 +315,7 @@ mb = match_button(master=root,
                   label_list=[list("ABCDE"), ['MS', 'WS', 'XD', 'MD', 'WD'], list('0123456789'), list('0123456789')],
                   pre=[False,False,True,True],
                   action=add_que)
-mb.grid(column=1, row=0, columnspan=1, rowspan=1, sticky='w')
+mb.grid(column=1, row=0, columnspan=1, rowspan=1)
 queue_frame.grid(column=0, row=1, columnspan=2, rowspan=1, sticky='w')
 set_event()
 root.mainloop()
