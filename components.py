@@ -4,9 +4,12 @@ from threading import Timer
 from copy import deepcopy
 from math import gcd
 from functools import reduce
+from database import PlayerDatabase
 
 
+pd = PlayerDatabase('Player Database11162023.XLSX')
 styleID = lambda x: f'{id(x)}.TButton'
+WARMUP_TIME = 2 * 60 + 30
 
 class group_select_btn(ttk.Button):
     _order = []
@@ -66,8 +69,35 @@ class match_button(tk.Frame):
                 btn = group_select_btn(self, label, group=i, pre=True if pre[i] and j==0 else False)
                 btn.grid(column=i, row=j*rowm, columnspan=1, rowspan=rowm, ipady=10*(rowm-1))
                 row += 1
-        call = ttk.Button(self, text='Call', command=lambda : action(group_select_btn.match_number(pre)))
+        # Players
+        self.var_p1 = tk.StringVar()
+        self.var_p2 = tk.StringVar()
+        label_p1 = tk.Label(self, text='Team 1')
+        label_p1.grid(row=row, column=0, rowspan=1, columnspan=len(label_list)//2)
+        label_p2 = tk.Label(self, text='Team 2')
+        label_p2.grid(row=row, column=-(-len(label_list) // 2), rowspan=1, columnspan=len(label_list) // 2)
+        row += 1
+        entry_p1 = AutocompleteEntry(self, textvariable=self.var_p1)
+        entry_p1.grid(row=row, column=0, rowspan=1, columnspan=len(label_list)//2)
+        entry_p2 = AutocompleteEntry(self, textvariable=self.var_p2)
+        entry_p2.grid(row=row, column=-(-len(label_list) // 2), rowspan=1, columnspan=len(label_list) // 2)
+        call = ttk.Button(self, text='Call', command=lambda : [action(self._construct_match(pre)),self.reset()])
         call.grid(column=i+1, row=0, columnspan=1, rowspan=self.max_row, ipady=(self.max_row-1)*10)
+        row += 1
+        self.instruction = """
+        If you want to add multiple player for doubles, separate players name with a ','.
+        Then the name list will show up again, and you can add both players.
+        The autocomplete label on edit button is wacky. Please bear with that lol
+        """
+        self.instruction_label = tk.Label(self, text=self.instruction, font=("Arial", 10))
+        self.instruction_label.grid(column=0, row=row, columnspan=len(label_list)+1)
+
+    def _construct_match(self, pre):
+        return Match(self.var_p1, self.var_p2, tk.StringVar(value=group_select_btn.match_number(pre)))
+
+    def reset(self):
+        self.var_p1.set("")
+        self.var_p2.set("")
 
 
 class timer_button(tk.Frame):
@@ -88,12 +118,25 @@ class timer_button(tk.Frame):
         row += 1
         # Match No
         self.var_match_no = tk.StringVar()
-        self.label_match_no = tk.Label(self, textvariable=self.var_match_no, font=("Arial", 20))
+        self.label_match_no = tk.Label(self, textvariable=self.var_match_no, font=("Arial", 10))
         self.label_match_no.grid(column=2, row=row, columnspan=1, rowspan=1)
+        row += 1
+        # Player names
+        self.var_p1 = tk.StringVar()
+        self.var_p2 = tk.StringVar()
+        self.match = Match(self.var_p1, self.var_p2, self.var_match_no)
+        self.label_p1 = tk.Label(self, textvariable=self.var_p1, font=('Arial', 15))
+        self.label_p1.grid(row=row, column=1, rowspan=1, columnspan=3)
+        row += 1
+        self.label_vs = tk.Label(self, text='VS', font=('Arial', 7))
+        self.label_vs.grid(row=row, column=2, rowspan=1, columnspan=1)
+        row += 1
+        self.label_p2 = tk.Label(self, textvariable=self.var_p2, font=('Arial', 15))
+        self.label_p2.grid(row=row, column=1, rowspan=1, columnspan=3)
         row += 1
         # Time label
         self.var_time = tk.StringVar(value='000:00')
-        self.label_time = tk.Label(self, textvariable=self.var_time, font=("Arial", 25))
+        self.label_time = tk.Label(self, textvariable=self.var_time, font=("Arial", 20))
         self.label_time.grid(column=1,row=row,columnspan=3,rowspan=1)
         row += 1
         # Buttons
@@ -105,7 +148,8 @@ class timer_button(tk.Frame):
         self.btn_reset.grid(column=3, row=row, columnspan=1, rowspan=1)
         row += 1
         # Labels to change BG
-        self.labels = [self.label_time, self.label_state, self.label_court_no, self.label_match_no, self]
+        self.labels = [self.label_vs, self.label_p1, self.label_p2, self.label_time,
+                       self.label_state, self.label_court_no, self.label_match_no, self]
         # Set Up Time Interval
         self.clock = clock(txtVar=self.var_time)
         self.event = RepeatTimer(1, lambda : self.clock.update(0, self.change_color))
@@ -121,8 +165,21 @@ class timer_button(tk.Frame):
         label_match_no = tk.Label(second, text='Match No:')
         label_match_no.grid(row=row, column=1, rowspan=1, columnspan=1)
         row += 1
-        entry_match_no = tk.Entry(second, textvariable=self.var_match_no)
+        entry_match_no = tk.Entry(second, textvariable=self.match.match_num)
         entry_match_no.grid(row=row, column=2, rowspan=1, columnspan=1)
+        row += 1
+        # Players
+        label_p1 = tk.Label(second, text='Player 1')
+        label_p1.grid(row=row, column=1, rowspan=1, columnspan=1)
+        row += 1
+        entry_p1 = AutocompleteEntry(second, textvariable=self.match.p1, window=True)
+        entry_p1.grid(row=row, column=1, rowspan=1, columnspan=5)
+        row += 1
+        label_p2 = tk.Label(second, text='Player 2')
+        label_p2.grid(row=row, column=1, rowspan=1, columnspan=1)
+        row += 1
+        entry_p2 = AutocompleteEntry(second, textvariable=self.match.p2, window=True)
+        entry_p2.grid(row=row, column=1, rowspan=1, columnspan=5)
         row += 1
         # Close Button
         btn_reset = ttk.Button(second, text='Reset', command=self.clear)
@@ -131,7 +188,9 @@ class timer_button(tk.Frame):
         btn_close.grid(row=row, column=3, rowspan=1, columnspan=1)
 
     def clear(self):
-        self.var_match_no.set('')
+        self.match.p1.set('')
+        self.match.p2.set('')
+        self.match.match_num.set('')
 
     def __callback(self):
         pass
@@ -149,7 +208,7 @@ class timer_button(tk.Frame):
             self.btn_start.config(text='Warm Up', command=self.warm_up, state='normal')
             self.btn_reset.config(text='Game', command=self.game)
         elif state == 1:
-            self.set_time(2 * 60)
+            self.set_time(WARMUP_TIME)
             self.count_down_button()
             self.btn_start.config(text='Warm Up', state='disabled')
             self.btn_reset.config(text='Game', command=self.game)
@@ -185,6 +244,11 @@ class timer_button(tk.Frame):
     def warm_up(self):
         self.change_state(1)
 
+    def update_info(self, match):
+        self.match.p1.set(match.p1.get())
+        self.match.p2.set(match.p2.get())
+        self.match.match_num.set(match.match_num.get())
+
 
 class clock:
     def __init__(self, txtVar):
@@ -219,21 +283,35 @@ class Match:
 
 
 class queue_timer(tk.Frame):
-    def __init__(self, master, del_func, index, label, minutes, *args, **kwargs):
+    def __init__(self, master, del_func, index, match, minutes, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
         self.master = master
         self.index = index
         row = 0
-        self.var_match_no = tk.StringVar(value=label)
+        # Player names
+        self.var_p1 = tk.StringVar()
+        self.var_p2 = tk.StringVar()
+        self.var_match_no = tk.StringVar()
+        self.match = Match(self.var_p1, self.var_p2, self.var_match_no)
+        self.update_info(match)
         self.label_match = tk.Label(self, text='Match No:')
         self.label_match.grid(row=row, column=1, rowspan=1, columnspan=1)
         row += 1
-        self.label_match_no = tk.Label(self, textvariable=self.var_match_no, font=("Arial", 20))
+        self.label_match_no = tk.Label(self, textvariable=self.var_match_no, font=("Arial", 10))
         self.label_match_no.grid(column=2, row=row, columnspan=1, rowspan=1)
+        row += 1
+        self.label_p1 = tk.Label(self, textvariable=self.var_p1, font=('Arial', 15))
+        self.label_p1.grid(row=row, column=1, rowspan=1, columnspan=3)
+        row += 1
+        self.label_vs = tk.Label(self, text='VS', font=('Arial', 7))
+        self.label_vs.grid(row=row, column=2, rowspan=1, columnspan=1)
+        row += 1
+        self.label_p2 = tk.Label(self, textvariable=self.var_p2, font=('Arial', 15))
+        self.label_p2.grid(row=row, column=1, rowspan=1, columnspan=3)
         row += 1
         # Time label
         self.var_time = tk.StringVar(value='000:00')
-        self.label_time = tk.Label(self, textvariable=self.var_time, font=("Arial", 25))
+        self.label_time = tk.Label(self, textvariable=self.var_time, font=("Arial", 20))
         self.label_time.grid(column=1,row=row,columnspan=3,rowspan=1)
         row += 1
         # Buttons
@@ -248,10 +326,11 @@ class queue_timer(tk.Frame):
         self.default_time = minutes * 60
         # Set Up Time Interval
         self.clock = clock(txtVar=self.var_time)
-        self.event = RepeatTimer(1, lambda : self.clock.update(0, self.change_color))
+        self.event = RepeatTimer(1, lambda: self.clock.update(0, self.change_color))
         self.set_time(self.default_time)
         self.event = RepeatTimer(1, lambda: self.clock.update(-1, self.change_color))
-        self.labels = [self.label_time, self.label_match_no, self, self.label_match]
+        self.labels = [self.label_vs, self.label_p1, self.label_p2, self.label_time, self.label_match_no,
+                       self, self.label_match]
         self.start_button()
 
     def edit_button(self):
@@ -264,8 +343,21 @@ class queue_timer(tk.Frame):
         label_match_no = tk.Label(second, text='Match No:')
         label_match_no.grid(row=row, column=1, rowspan=1, columnspan=1)
         row += 1
-        entry_match_no = tk.Entry(second, textvariable=self.var_match_no)
+        entry_match_no = tk.Entry(second, textvariable=self.match.match_num)
         entry_match_no.grid(row=row, column=2, rowspan=1, columnspan=1)
+        row += 1
+        # Players
+        label_p1 = tk.Label(second, text='Player 1')
+        label_p1.grid(row=row, column=1, rowspan=1, columnspan=1)
+        row += 1
+        entry_p1 = AutocompleteEntry(second, textvariable=self.match.p1, window=True)
+        entry_p1.grid(row=row, column=1, rowspan=1, columnspan=5)
+        row += 1
+        label_p2 = tk.Label(second, text='Player 2')
+        label_p2.grid(row=row, column=1, rowspan=1, columnspan=1)
+        row += 1
+        entry_p2 = AutocompleteEntry(second, textvariable=self.match.p2, window=True)
+        entry_p2.grid(row=row, column=1, rowspan=1, columnspan=5)
         row += 1
         # Close Button
         btn_reset = ttk.Button(second, text='Clear', command=self.clear)
@@ -274,7 +366,9 @@ class queue_timer(tk.Frame):
         btn_close.grid(row=row, column=3, rowspan=1, columnspan=1)
 
     def clear(self):
-        self.var_match_no.set('')
+        self.match.p1.set('')
+        self.match.p2.set('')
+        self.match.match_num.set('')
 
     def destroy_window(self, window):
         window.destroy()
@@ -300,3 +394,66 @@ class queue_timer(tk.Frame):
         self.change_color('white')
         self.event = RepeatTimer(1, lambda : self.clock.update(-1, self.change_color))
         self.start_button()
+
+    def update_info(self, match):
+        self.match.p1.set(match.p1.get())
+        self.match.p2.set(match.p2.get())
+        self.match.match_num.set(match.match_num.get())
+
+
+class AutocompleteEntry(tk.Entry):
+    def __init__(self, master, window=False, *args, **kwargs):
+
+        super().__init__(master, *args, **kwargs)
+        self.master = master
+        self.window = window
+        self.var = kwargs["textvariable"]
+
+        self.var.trace_variable('w', self.changed)
+
+        self.lb_up = False
+
+    def changed(self, name, index, mode):
+
+        if self.var.get() == '':
+            if self.lb:
+                self.lb.destroy()
+            self.lb_up = False
+        else:
+            words = self.comparison()
+            if words:
+                if not self.lb_up:
+                    self.lb = tk.Listbox()
+                    self.lb.bind("<Double-Button-1>", self.selection)
+                    lbx = self.winfo_x() + (self.master.winfo_x() if not self.window else self.master.winfo_rootx())
+                    lby = self.winfo_y() + (self.master.winfo_y() if not self.window else self.master.winfo_rooty()) + self.winfo_height()
+                    self.lb.place(x=lbx, y=lby)
+                    self.lb_up = True
+
+                self.lb.delete(0, tk.END)
+                for w in words:
+                    self.lb.insert(tk.END, w)
+            else:
+                if self.lb_up:
+                    self.lb.destroy()
+                    self.lb_up = False
+
+    def selection(self, event):
+        if self.lb_up:
+            name = self.var.get()
+            if "," in name:
+                name = name[:name.index(",")] + "," + self.lb.get(tk.ACTIVE)
+            else:
+                name = self.lb.get(tk.ACTIVE)
+            self.var.set(name)
+            self.lb.destroy()
+            self.lb_up = False
+            self.icursor(tk.END)
+            self.focus()
+
+
+    def comparison(self):
+        name = self.var.get()
+        if "," in name:
+            name = name[name.index(",")+1:]
+        return pd.search_name(name)
