@@ -9,6 +9,7 @@ from database import PlayerDatabase
 
 pd = PlayerDatabase('Player Database11162023.XLSX')
 styleID = lambda x: f'{id(x)}.TButton'
+WARMUP_TIME = 2 * 60 + 30
 
 class group_select_btn(ttk.Button):
     _order = []
@@ -85,7 +86,8 @@ class match_button(tk.Frame):
         row += 1
         self.instruction = """
         If you want to add multiple player for doubles, separate players name with a ','.
-        Then the name list will show up again, and you can add both players
+        Then the name list will show up again, and you can add both players.
+        The autocomplete label on edit button is wacky. Please bear with that lol
         """
         self.instruction_label = tk.Label(self, text=self.instruction, font=("Arial", 10))
         self.instruction_label.grid(column=0, row=row, columnspan=len(label_list)+1)
@@ -206,7 +208,7 @@ class timer_button(tk.Frame):
             self.btn_start.config(text='Warm Up', command=self.warm_up, state='normal')
             self.btn_reset.config(text='Game', command=self.game)
         elif state == 1:
-            self.set_time(2 * 60)
+            self.set_time(WARMUP_TIME)
             self.count_down_button()
             self.btn_start.config(text='Warm Up', state='disabled')
             self.btn_reset.config(text='Game', command=self.game)

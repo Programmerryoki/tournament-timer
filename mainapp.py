@@ -49,8 +49,8 @@ service = None
 event = None
 
 # CONSTANTS
-COURT_ROW = 3
-COURT_COL = 4
+COURT_ROW = 2
+COURT_COL = 6
 MAX_CALL_QUE = 30
 QUEUE_MAX_COL = 5
 CALL_TIME = 6 # Minutes before DQ
@@ -258,7 +258,6 @@ for row in range(COURT_ROW):
         tb = timer_button(court_frame, padx=5, pady=10, highlightthickness=2,
                           highlightbackground='black')
         tb.grid(column=col, row=row, columnspan=1, rowspan=1)
-# court_frame.pack(side='top', anchor='nw')
 court_frame.grid(column=0, row=0, columnspan=1, rowspan=1, sticky='w')
 
 queue_frame = ttk.Frame(root)
