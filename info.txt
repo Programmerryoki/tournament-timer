@@ -4,4 +4,4 @@ pyinstaller --onefile hello.py
 
 https://docs.google.com/presentation/d/1kI6iC2XyPtJslBBTX8aCuThsxc9L0w5T0iDoXWyevxE/edit?usp=sharing
 
-https://tinyurl.com/SJSUFall23
+https://tinyurl.com/SJSUFall2023

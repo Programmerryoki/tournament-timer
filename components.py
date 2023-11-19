@@ -87,10 +87,14 @@ class match_button(tk.Frame):
         self.instruction = """
         If you want to add multiple player for doubles, separate players name with a ','.
         Then the name list will show up again, and you can add both players.
-        The autocomplete label on edit button is wacky. Please bear with that lol
+        The autocomplete label on edit button is wacky. Please bear with 
+        that lol And try not to use it
+        Please call Ryoki if the software bugs out / or call at 4088597149
+        The link to ppt is https://tinyurl.com/SJSUFall2023
         """
         self.instruction_label = tk.Label(self, text=self.instruction, font=("Arial", 10))
-        self.instruction_label.grid(column=0, row=row, columnspan=len(label_list)+1)
+        self.instruction_label.grid(column=i+2, row=0, columnspan=1,
+                                    rowspan=self.max_row)
 
     def _construct_match(self, pre):
         return Match(self.var_p1, self.var_p2, tk.StringVar(value=group_select_btn.match_number(pre)))

@@ -51,8 +51,8 @@ event = None
 # CONSTANTS
 COURT_ROW = 2
 COURT_COL = 6
-MAX_CALL_QUE = 30
-QUEUE_MAX_COL = 5
+MAX_CALL_QUE = 12
+QUEUE_MAX_COL = 8
 CALL_TIME = 6 # Minutes before DQ
 
 PPT_ROW = 6 # How many rows are in ppt table
@@ -253,11 +253,18 @@ def checkUpdate():
 # Court Timer part
 row = 0
 court_frame = ttk.Frame(root)
-for row in range(COURT_ROW):
-    for col in range(COURT_COL):
-        tb = timer_button(court_frame, padx=5, pady=10, highlightthickness=2,
-                          highlightbackground='black')
-        tb.grid(column=col, row=row, columnspan=1, rowspan=1)
+for row in range(COURT_ROW-1,-1,-1):
+    if row == 1:
+        for col in range(COURT_COL):
+            tb = timer_button(court_frame, padx=5, pady=10, highlightthickness=2,
+                              highlightbackground='black')
+            tb.grid(column=col, row=row, columnspan=1, rowspan=1)
+    else:
+        for col in range(COURT_COL-1,-1,-1):
+            tb = timer_button(court_frame, padx=5, pady=10,
+                              highlightthickness=2,
+                              highlightbackground='black')
+            tb.grid(column=col, row=row, columnspan=1, rowspan=1)
 court_frame.grid(column=0, row=0, columnspan=1, rowspan=1, sticky='w')
 
 queue_frame = ttk.Frame(root)
@@ -314,7 +321,7 @@ mb = match_button(master=root,
                   label_list=[list("ABCDE"), ['MS', 'WS', 'XD', 'MD', 'WD'], list('0123456789'), list('0123456789')],
                   pre=[False,False,True,True],
                   action=add_que)
-mb.grid(column=1, row=0, columnspan=1, rowspan=1)
-queue_frame.grid(column=0, row=1, columnspan=2, rowspan=1, sticky='w')
+mb.grid(column=0, row=1, columnspan=1, rowspan=1)
+queue_frame.grid(column=0, row=2, columnspan=2, rowspan=1, sticky='w')
 set_event()
 root.mainloop()
